@@ -100,6 +100,7 @@ type Downloader interface {
 	Error() error
 	Status() DownloadStatus
 	Reader() io.ReadCloser
+	Stop()
 }
 
 type dlfut struct {
@@ -117,6 +118,16 @@ type DownloadStatus struct {
 	Path       string
 	Downloaded int64
 	Size       int64
+}
+
+func (dl *dlfut) Stop() {
+	dl.cond.L.Lock()
+	defer dl.cond.L.Unlock()
+	defer dl.cond.Broadcast()
+	if dl.done || dl.err != nil {
+		return
+	}
+	dl.err = errors.New("stopped")
 }
 
 func (dl *dlfut) Error() error {
@@ -151,9 +162,14 @@ func (rd *dlErrReader) Close() error {
 }
 
 type dlReader struct {
+	cerr error // error at creation
 	dl   *dlfut
 	f    *os.File
 	read int64
+}
+
+func (rd *dlReader) File() *os.File {
+	return rd.f
 }
 
 func (rd *dlReader) Read(p []byte) (int, error) {
@@ -174,6 +190,14 @@ func (rd *dlReader) Read(p []byte) (int, error) {
 				}
 				rd.dl.cond.L.Unlock()
 				return n, err
+			}
+			if rd.read > rd.dl.size {
+				rd.dl.cond.L.Unlock()
+				return n, errors.New("corrupt: too much data written")
+			}
+			if rd.read == rd.dl.size {
+				rd.dl.cond.L.Unlock()
+				return n, io.EOF
 			}
 			rd.dl.cond.Wait()
 			rd.dl.cond.L.Unlock()
@@ -207,7 +231,6 @@ func (dl *dlfut) Reader() io.ReadCloser {
 			return f
 		}
 		return &dlReader{dl: dl, f: f}
-
 	}
 }
 
@@ -224,7 +247,9 @@ func Download(planetURL string, path string) Downloader {
 		}()
 		if err := download(planetURL, path, dl); err != nil {
 			dl.cond.L.Lock()
-			dl.err = err
+			if dl.err == nil {
+				dl.err = err
+			}
 			dl.cond.Broadcast()
 			dl.cond.L.Unlock()
 		}
@@ -291,10 +316,16 @@ func download(planetURL string, path string, dl *dlfut) error {
 			if written > size {
 				return errors.New("corrupt: too much data written")
 			}
-			if _, err := f.Write(packet[:n]); err != nil {
+			dl.cond.L.Lock()
+			if dl.err != nil {
+				err := dl.err
+				dl.cond.L.Unlock()
 				return err
 			}
-			dl.cond.L.Lock()
+			if _, err := f.Write(packet[:n]); err != nil {
+				dl.cond.L.Unlock()
+				return err
+			}
 			dl.downloaded = written
 			dl.cond.Broadcast()
 			dl.cond.L.Unlock()
