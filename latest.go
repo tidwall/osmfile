@@ -257,9 +257,16 @@ func Download(planetURL string, path string) Downloader {
 	return dl
 }
 
-func download(planetURL string, path string, dl *dlfut) error {
+func download(url string, path string, dl *dlfut) error {
 	client := &http.Client{}
-	res, err := client.Head(primary + filepath.Base(planetURL))
+
+	var primaryURL string
+	if strings.HasPrefix(filepath.Base(url), "planet-") {
+		primaryURL = primary + filepath.Base(url)
+	} else {
+		primaryURL = url
+	}
+	res, err := client.Head(primaryURL)
 	if err != nil {
 		return err
 	}
@@ -294,7 +301,7 @@ func download(planetURL string, path string, dl *dlfut) error {
 		// already downloaded
 		return nil
 	}
-	req, err := http.NewRequest("GET", planetURL, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
