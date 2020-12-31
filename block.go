@@ -76,10 +76,12 @@ func (r Relation) NumMembers() int {
 }
 
 // MemberAt ...
-func (r Relation) MemberAt(index int) (ref int64, role uint32, typ byte) {
-	ref = r.block.relationMemberRefs[r.mset:r.mend][index]
-	role = r.block.relationMemberRoles[r.mset:r.mend][index]
+func (r Relation) MemberAt(index int) (typ byte, ref int64, role string) {
 	typ = r.block.relationMemberTypes[r.mset:r.mend][index]
+	ref = r.block.relationMemberRefs[r.mset:r.mend][index]
+	role = r.block.StringAt(int(
+		r.block.relationMemberRoles[r.mset:r.mend][index],
+	))
 	return
 }
 
