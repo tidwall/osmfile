@@ -2,6 +2,27 @@
 
 package osmfile
 
+type DataKind int
+
+const (
+	DataKindNodes     DataKind = 0
+	DataKindWays      DataKind = 1
+	DataKindRelations DataKind = 2
+)
+
+func (k DataKind) String() string {
+	switch k {
+	case DataKindNodes:
+		return "nodes"
+	case DataKindWays:
+		return "ways"
+	case DataKindRelations:
+		return "relations"
+	default:
+		return "unknown"
+	}
+}
+
 type blockNode struct {
 	id   int64
 	lat  float64
@@ -126,7 +147,7 @@ func (w Way) StringAt(index int) string {
 
 // Block ...
 type Block struct {
-	skip            bool
+	// skip            bool
 	granularity     int64
 	latOffset       int64
 	lonOffset       int64
@@ -167,8 +188,8 @@ type Block struct {
 // }
 
 // DataKind ...
-func (b Block) DataKind() int {
-	return b.dataKind
+func (b Block) DataKind() DataKind {
+	return DataKind(b.dataKind)
 }
 
 // // Index ...

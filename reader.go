@@ -91,7 +91,8 @@ func NewBlockReader(r io.Reader) *BlockReader {
 	return &BlockReader{rr: newRawBlockReader(r)}
 }
 
-// ReadBlock reads the next OSMData block
+// ReadBlock reads the next OSMData block.
+// Returns the number of bytes read and the block.
 func (r *BlockReader) ReadBlock() (n int, block Block, err error) {
 	for {
 		nn, rblock, err := r.rr.ReadBlock()
