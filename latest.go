@@ -276,6 +276,11 @@ func download(url string, path string, dl *dlfut) error {
 	if res.StatusCode != 200 {
 		return errors.New(res.Status)
 	}
+	if res.Header.Get("Content-Type") != "application/octet-stream" {
+		if res.Header.Get("Content-Type") == "application/x-bittorrent" {
+			return errors.New("404 Not Found")
+		}
+	}
 	size, err := strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
 		return err

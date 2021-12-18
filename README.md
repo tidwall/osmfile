@@ -65,7 +65,7 @@ Download the planet file to disk.
 
 ```go
 
-// using a valid mirror url
+// Using a valid mirror url. 
 mirrorURL := "https://ftp.fau.de/osm-planet/pbf/planet-210329.osm.pbf"
 
 // Start downloading. The downloading happens in a background, and will
@@ -77,9 +77,16 @@ dl := osmfile.Download(mirrorURL, "planet.pbf")
 // Here we will download the file and print a status every second.
 for {
 	status := dl.Status()
-	fmt.Printf("%f.1%% %d / %d MB Downloaded\n",
-		status.Downloaded/1024/1024,
-		status.Size/1024/1024)
+	if status.Size > 0 {
+		fmt.Printf("%.2f%% %d / %d MB Downloaded\n",
+			float64(status.Downloaded)/float64(status.Size)*100,
+			status.Downloaded/1024/1024,
+			status.Size/1024/1024)
+		if status.Done {
+			// The downloader is done due to success or failure.
+			break
+		}
+	}
 	if status.Done {
 		// The downloader is done due to success or failure.
 		break
